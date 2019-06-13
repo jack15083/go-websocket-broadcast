@@ -1,0 +1,26 @@
+{
+    "AppName":"xhx_pushservice",
+    "Listen": ":9002",
+    "APISecret":"dev",
+    "BasePath":"/mnt/hgfs/git/xhx_pushservice/src",
+    "Logger": {
+        "Debug": true,
+        "OutFile": true,
+        "LogPath":"/var/log/mst/xhx_pushservice",
+        "MaxAge": 360, 
+        "RotationTime" : 1
+    },
+    "DataBase": {
+        "default": {
+            "DriverName": "mysql",
+            "DataSourceName": "root:mst112233@tcp(10.0.0.49:3306)/kaikela_support?charset=utf8mb4"
+        }
+    },
+    "Redis": {
+        "default":{
+            "Addr": "10.0.0.49:6379",
+            "Password": "", 
+            "DB":0
+        }
+    }
+}
