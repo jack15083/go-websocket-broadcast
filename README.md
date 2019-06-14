@@ -32,6 +32,16 @@ require_once 'XHXPushApi.php';
 $title = "通知标题pxy";
 $content = "测试通知内容，测试通知内容，测试通知内容，测试通知内容，测试通知内容，测试通知内容。";
 
+/**  push接口支持的参数
+     * @param $senderId      //发送者id
+     * @param $senderName    //发送者姓名
+     * @param $msgType       //消息类型 1发送在线用户即时消息 2登录后必达消息 3业务内容更新消息
+     * @param $title         //消息标题
+     * @param $content       //消息内容数组或字符串，如果是数组将会被json_encode
+     * @param $userIds       //用户id以,号分隔 msgType为2时userIds必传
+     * @param $options       //弹窗选项目前支持 duration(毫秒), position, type参数（对应elementUi通知组件参数）
+     * @return array
+*/
 $res = XHXPushApi::getInstance()->push(1,'god', 2, $title, $content, [44, 63]);
 
 print_r($res);
