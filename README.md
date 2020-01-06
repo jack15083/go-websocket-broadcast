@@ -90,7 +90,7 @@ client.html
             }
 
             var that = this;
-            this.ws = new WebSocket("ws://127.0.0.1:9002/ws/");
+            this.ws = new WebSocket('ws://127.0.0.1:9002/ws/' + '?token=xxxxx&uid=xxx');
             this.ws.onclose = function(e) {
                 clearInterval(that.interval)
                 if(!that.retryConnect) {
@@ -102,8 +102,7 @@ client.html
                 }, 5000);
             }
             this.ws.addEventListener('open', function (e) {
-                //登录
-                that.ws.send('{"event":"register", "token":"00000063_d10f2dd30c087a0573d54e4767640253279"}');
+                
             });
 
             this.ws.addEventListener("message", function(e) {
