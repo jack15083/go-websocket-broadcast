@@ -8,13 +8,12 @@ golang websocket 服务可通过http接口push消息到web客户端，消息发�
 - 更改 config.dev.json中的相关db配置与项目路径配置
 - 执行 install_package.sh 安装相关包依赖
 - 执行 go build -o build/push_service
-- 执行 build/push_service dev
+- 执行 build/push_service local
 
 
 ## 注意
 
 本项目websocket使用用户token验证连接，这一块验证的逻辑需要根据自己的业务去更改或删除。
-可联系我进行付费二次开发。
 
 ## 使用
 
