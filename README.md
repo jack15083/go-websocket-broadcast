@@ -4,10 +4,11 @@ golang websocket 服务可通过http接口push消息到web客户端，消息发�
 
 ## 安装
 
-- 导入db.sql 安装相关push日志表
-- 更改config.dev.json中的相关db配置与项目路径配置
-- 执行install_package.sh 安装相关包依赖
-- 执行go run build 编译并运行程序 
+- 导入 db.sql 安装相关push日志表
+- 更改 config.dev.json中的相关db配置与项目路径配置
+- 执行 install_package.sh 安装相关包依赖
+- 执行 go build -o build/push_service
+- 执行 build/push_service dev
 
 
 ## 注意
