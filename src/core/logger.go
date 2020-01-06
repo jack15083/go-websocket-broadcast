@@ -8,6 +8,7 @@ import (
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/pkg/errors"
 	"github.com/rifflock/lfshook"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,14 +22,16 @@ func (l *Logger) Init() {
 		return
 	}
 
+	os.MkdirAll(Config.Logger.LogPath, 0755)
+
 	maxAge := Config.Logger.MaxAge * time.Hour
 	rotationTime := Config.Logger.RotationTime * time.Hour
 
-	l.ConfigLocalFilesystemLogger(Config.Logger.LogPath, Config.AppName, maxAge, rotationTime)
+	log.AddHook(l.NewRotateHook(Config.Logger.LogPath, Config.AppName, maxAge, rotationTime))
 }
 
 // config logrus log to local filesystem, with file rotation
-func (l *Logger) ConfigLocalFilesystemLogger(logPath string, logFileName string, maxAge time.Duration, rotationTime time.Duration) {
+func (l *Logger) NewRotateHook(logPath string, logFileName string, maxAge time.Duration, rotationTime time.Duration) *lfshook.LfsHook {
 	baseLogPaht := path.Join(logPath, logFileName)
 	writer, err := rotatelogs.New(
 		baseLogPaht+".%Y%m%d.log",
@@ -47,7 +50,21 @@ func (l *Logger) ConfigLocalFilesystemLogger(logPath string, logFileName string,
 		log.ErrorLevel: writer,
 		log.FatalLevel: writer,
 		log.PanicLevel: writer,
-	}, &log.TextFormatter{})
+	}, &log.TextFormatter{TimestampFormat: "2006-01-02 15:04:05.000"})
 
-	log.AddHook(lfHook)
+	return lfHook
+}
+
+func (l *Logger) New(logFileName string) *logrus.Logger {
+	var lognew = logrus.New()
+
+	if Config.Logger.Debug {
+		lognew.SetLevel(log.DebugLevel)
+	}
+
+	maxAge := Config.Logger.MaxAge * time.Hour
+	rotationTime := Config.Logger.RotationTime * time.Hour
+
+	lognew.AddHook(l.NewRotateHook(Config.Logger.LogPath, logFileName, maxAge, rotationTime))
+	return lognew
 }

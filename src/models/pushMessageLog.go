@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"../config"
@@ -28,21 +29,28 @@ func (PushMessageLogModel) CreateWaiteMessageLogs(waitUserIds []interface{}, msg
 		return
 	}
 
+	if len(waitUserIds) == 0 {
+		return
+	}
+
 	db, err := BaseModel.ConnectDB("default")
 	if err != nil {
 		return
 	}
+	defer db.Close()
 
-	for _, waitUserId := range waitUserIds {
-		userId := waitUserId.(int64)
-		if userId <= 0 {
-			continue
+	sql := "INSERT INTO xhx_push_message_log (msg_id, msg_type, user_id, create_time, update_time) VALUES "
+	// 循环data数组,组合sql语句
+	for key, userId := range waitUserIds {
+		if len(waitUserIds)-1 == key {
+			//最后一条数据 以分号结尾
+			sql += fmt.Sprintf("(%d, %d, %d,'%s','%s');", msgId, msgType, userId, createTime, createTime)
+		} else {
+			sql += fmt.Sprintf("(%d, %d, %d,'%s','%s'),", msgId, msgType, userId, createTime, createTime)
 		}
-		pml := PushMessageLogModel{MsgId: msgId, MsgType: msgType, CreateTime: createTime, UserId: userId, UpdateTime: createTime}
-		db.Create(&pml)
 	}
 
-	defer db.Close()
+	db.Exec(sql)
 }
 
 //新增发送日志 status 1 发送成功 2发送失败 delete是否册除

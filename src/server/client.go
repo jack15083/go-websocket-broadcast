@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"strconv"
+	"fmt"
 	"time"
 
 	"../config"
@@ -22,58 +22,18 @@ type Client struct {
 	RegisterTime int64
 }
 
-//客户端连接后激活这里读取并注册client
+//客户端连接消息读取
 func (c *Client) Read() {
-	defer c.Close()
-
 	for {
-		_, message, err := c.Socket.ReadMessage()
-
-		//如果读取不到token数据关闭连接
+		_, _, err := c.Socket.ReadMessage()
 		if err != nil {
 			c.Close()
-			log.Debug("读取socket数据失败")
 			break
 		}
-
-		var rm config.RegisterMessage
-		err1 := json.Unmarshal(message, &rm)
-		if err1 != nil {
-			c.CloseAndRes(101, "解析数据失败，请检查数据格式", "register")
-			break
-		}
-
-		if rm.Event != "register" {
-			continue
-		}
-
-		if rm.Token == "" {
-			c.CloseAndRes(102, "token 必传", "register")
-			break
-		}
-
-		redisClient := utils.BaseRedis.Connect("default")
-		userId := rm.Token[0:8]
-
-		if !c.CheckToken(rm.Token) {
-			c.CloseAndRes(100, "token过期", "register")
-			break
-		}
-
-		utils.BaseRedis.Close(redisClient)
-
-		c.UserId, _ = strconv.ParseInt(userId, 10, 64)
-		c.Token = rm.Token
-
-		jsonMessage, _ := json.Marshal(&config.ResMessage{Error: 0, Msg: "ok", Event: "register"})
-		c.Send <- jsonMessage
-
-		//发送必读消息
-		go c.SendMustReadMsg()
 	}
 }
 
-//客户端消息写入程序
+//客户端消息写入
 func (c *Client) Write() {
 	defer c.Close()
 
@@ -88,7 +48,7 @@ func (c *Client) Write() {
 			var res config.ResMessage
 			json.Unmarshal(message, &res)
 
-			if !c.CheckToken("") {
+			if !c.CheckToken() {
 				c.CloseAndRes(200, "token过期", "messaage")
 				go c.SaveUserMsgLog(res.Data, 2)
 				break
@@ -119,13 +79,30 @@ func (c *Client) SaveUserMsgLog(data config.MessageData, status int) {
 //发送给用户最近未读的必达消息
 func (c *Client) SendMustReadMsg() {
 	var pushMsgLogModel models.PushMessageLogModel
-	msgData := pushMsgLogModel.GetMustReadMsgByUserId(63, time.Now().Unix()-config.LAST_MSG_TIME_LIMIT)
+	msgData := pushMsgLogModel.GetMustReadMsgByUserId(c.UserId, time.Now().Unix()-config.LAST_MSG_TIME_LIMIT)
 	for _, row := range msgData {
 		message, _ := json.Marshal(&config.ResMessage{Error: 0, Msg: "ok", Event: "message", Data: row})
-		c.Send <- message
+
+		//业务更新消息
+		if row.MsgType == 3 {
+			c.Send <- message
+			continue
+		}
+		popType, options, msg := Manager.GetMsgPopType(message)
+		//发送element通知
+		if popType == "ele" || popType == "all" {
+			c.Send <- Manager.UpdateMsgPopType("ele", options, msg)
+		}
+
+		//发送浏览器通知
+		if popType == "browser" || popType == "all" {
+			c.Send <- Manager.UpdateMsgPopType("browser", options, msg)
+		}
+
 	}
 }
 
+//发送消息
 func (c *Client) SendRes(res config.ResMessage) {
 	resJson, _ := json.Marshal(res)
 	err := c.Socket.WriteMessage(websocket.TextMessage, resJson)
@@ -135,49 +112,52 @@ func (c *Client) SendRes(res config.ResMessage) {
 	}
 }
 
+//关闭连接
 func (c *Client) Close() {
 	Manager.Unregister <- c
 	c.Socket.Close()
 }
 
+//发送错误消息并关闭连接
 func (c *Client) CloseAndRes(errCode int, msg string, event string) {
 	c.SendRes(config.ResMessage{Error: errCode, Msg: msg, Event: event})
 	c.Close()
 }
 
 //check user login token
-func (c *Client) CheckToken(reqToken string) bool {
+func (c *Client) CheckToken() bool {
 	redisClient := utils.BaseRedis.Connect("default")
-	defer func() {
-		redisClient.Close()
-	}()
-	if reqToken == "" {
-		reqToken = c.Token
-	}
+	defer redisClient.Close()
 
-	if reqToken == "" {
+	if len(c.Token) < 8 {
 		return false
 	}
 
-	userId := reqToken[0:8]
-	key := config.XHX_SESSION_NAME + userId
-	token, err3 := redisClient.HGet(key, "token").Result()
-
-	if err3 == redis.Nil {
-		log.Debug("redis key not exist")
+	key := fmt.Sprintf(config.XHX_SESSION_NAME+"%d", c.UserId)
+	token, err := redisClient.Get(key).Result()
+	if err == redis.Nil {
+		log.Debug("register token key not exist")
 		return false
 	}
 
-	if token != reqToken {
-		log.Debug("token expired1")
-		return false
-	}
-
-	adminIdCheck, _ := redisClient.HExists(key, "admin_id").Result()
-	if !adminIdCheck {
-		log.Debug("token expired, admin_id is false")
+	if token != c.Token {
+		log.Debug("token expired")
 		return false
 	}
 
 	return true
+}
+
+//获取客户端链接数量
+func (c *Client) GetClientNumByUserId(userId int64) int {
+	count := 0
+	Manager.Clients.Range(func(k, v interface{}) bool {
+		conn := k.(*Client)
+		if conn.UserId == userId {
+			count++
+		}
+		return true
+	})
+
+	return count
 }

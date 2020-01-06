@@ -1,16 +1,15 @@
 package controllers
 
 import (
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"../config"
-	"../core"
 	"../models"
 	"../server"
 	"../utils"
@@ -22,11 +21,24 @@ type PushController struct {
 }
 
 func (c *PushController) Hello(w http.ResponseWriter, r *http.Request) {
-	c.sendOk(w, "Hello World")
+	count := 0
+	server.Manager.Clients.Range(func(k, v interface{}) bool {
+		count++
+		return true
+	})
+
+	w.Write([]byte(fmt.Sprintf("当前client连接总数：%d\n\n", count)))
+	w.Write([]byte("client连接详情：\n"))
+
+	server.Manager.Clients.Range(func(k, v interface{}) bool {
+		conn := k.(*server.Client)
+		w.Write([]byte(fmt.Sprintf("Client ID:%s, Admin ID:%d\n", conn.ID, conn.UserId)))
+		return true
+	})
 }
 
 func (c *PushController) Push(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPut {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		fmt.Fprintf(w, "method not allowed!")
 		return
@@ -38,8 +50,16 @@ func (c *PushController) Push(w http.ResponseWriter, r *http.Request) {
 
 	if err := decoder.Decode(&pm); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "bad request!")
-		log.Error("push message error: " + err.Error())
+		log.Error("Push message error: " + err.Error())
+		return
+	}
+
+	if len(r.Header["Access-Token"]) == 0 {
+		c.sendError(w, 400, "AccessToken校验失败")
+	}
+
+	if !c.checkApiKey(r.Header["Access-Token"][0], pm) {
+		c.sendError(w, 401, "AccessToken验证失败")
 		return
 	}
 
@@ -68,7 +88,7 @@ func (c *PushController) Push(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(userIds) > config.MAX_SEND_USER_NUM && pm.MsgType == 2 {
-			c.sendError(w, 200, fmt.Sprintf("msgType为2时最多发送用户量不可超过%d", config.MAX_SEND_USER_NUM))
+			c.sendError(w, 200, fmt.Sprintf("必读消指定用户时最多发送用户量不可超过%d", config.MAX_SEND_USER_NUM))
 			return
 		}
 		//发送消息到指定用户
@@ -85,35 +105,15 @@ func (c *PushController) Push(w http.ResponseWriter, r *http.Request) {
 	c.sendOk(w, "ok")
 }
 
-//push api接口token校验
-func (c *PushController) checkApiToken(pm config.PushMessage) bool {
-	var str string
-
-	str += strconv.FormatInt(pm.SenderId, 10) + core.Config.APISecret
-	str += pm.SenderName + core.Config.APISecret
-	str += strconv.Itoa(pm.MsgType) + core.Config.APISecret
-	str += pm.Title + core.Config.APISecret
-	str += pm.Content + core.Config.APISecret
-	str += pm.UserIds + core.Config.APISecret
-	str += pm.Options + core.Config.APISecret
-	str += pm.Timestamp
-
-	//方法一
-	data := []byte(str)
-	has := md5.Sum(data)
-	md5str := fmt.Sprintf("%x", has) //将[]byte转成16进制
-
-	if md5str != pm.Token {
-		return false
-	}
-
-	return true
-}
-
 //检查push接口参数
 func (c *PushController) checkPushParams(w http.ResponseWriter, pm config.PushMessage) bool {
-	if pm.Token == "" {
-		c.sendError(w, 101, "Token必传")
+	msgTime, err := strconv.ParseFloat(pm.Timestamp, 64)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if math.Abs(float64(time.Now().Unix())-msgTime) > 120 {
+		c.sendError(w, 109, "Token expired")
 		return false
 	}
 
@@ -144,11 +144,6 @@ func (c *PushController) checkPushParams(w http.ResponseWriter, pm config.PushMe
 
 	if pm.MsgType == 2 && pm.UserIds == "0" {
 		c.sendError(w, 108, "msgType为2时必须传要发送的用户id")
-		return false
-	}
-
-	if !c.checkApiToken(pm) {
-		c.sendError(w, 107, "Token 验证失败")
 		return false
 	}
 

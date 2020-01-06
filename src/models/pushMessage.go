@@ -27,10 +27,11 @@ func (PushMessageModel) Create(m PushMessageModel) int64 {
 	if err != nil {
 		return 0
 	}
+	defer db.Close()
 
 	m.CreateTime = time.Now().Format(config.TIMESTAMP_FORMAT)
 
 	db.Create(&m)
-	defer db.Close()
+
 	return m.ID
 }

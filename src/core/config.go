@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"flag"
 	"os"
 	"time"
 
@@ -11,14 +12,15 @@ import (
 var Config config
 
 type config struct {
-	BasePath  string
-	Logger    Logger
-	Database  map[string]Database
-	Listen    string
-	APISecret string
-	AppEnv    string
-	AppName   string
-	Redis     map[string]RedisConfig
+	BasePath   string
+	Logger     Logger
+	Database   map[string]Database
+	Listen     string
+	HttpListen string
+	APISecret  string
+	AppEnv     string
+	AppName    string
+	Redis      map[string]RedisConfig
 }
 
 type Logger struct {
@@ -32,6 +34,8 @@ type Logger struct {
 type Database struct {
 	DriverName     string
 	DataSourceName string
+	MaxOpenNum     int
+	MaxIdleNum     int
 }
 
 type RedisConfig struct {
@@ -41,22 +45,15 @@ type RedisConfig struct {
 }
 
 func (c *config) Init() {
-	var appenv string
-	if len(os.Args) < 2 {
-		appenv = os.Getenv("APP_ENV")
-	} else {
-		appenv = os.Args[1]
-	}
+	var configPath string
+	flag.StringVar(&configPath, "c", "config.local.json", "App conifg path")
+	flag.Parse()
+	log.WithFields(log.Fields{"configPath": configPath}).Info("Config Init")
 
-	if appenv == "" {
-		Config.AppEnv = "dev"
-	} else {
-		Config.AppEnv = appenv
-	}
-
-	file, err := os.Open("config." + Config.AppEnv + ".json")
+	file, err := os.Open(configPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(0)
 	}
 	defer file.Close()
 
@@ -64,7 +61,8 @@ func (c *config) Init() {
 
 	err = decoder.Decode(&c)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		os.Exit(0)
 	}
 
 	cwd, _ := os.Getwd()

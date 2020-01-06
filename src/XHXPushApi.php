@@ -9,13 +9,19 @@
 class XHXPushApi
 {
     private static $_api_secret = 'dev'; //根据环境配置
-    private static $_api_url	= 'http://10.0.0.49:9002/push'; //根据环境配置
+    private static $_api_url	= 'http://127.0.0.1:9002/push'; //根据环境配置
 
-    /**
+     /**
      * singleton instance
      *
      */
     protected static $_instance = null;
+
+    public function __construct()
+    {
+        $this->apiSecret = Yaf_Registry::get('config')->pushserver->secret;
+        $this->apiUrl = Yaf_Registry::get('config')->pushserver->apiurl;
+    }
 
     /**
      * Returns singleton instance of XHXPushApi
@@ -41,6 +47,7 @@ class XHXPushApi
      * @param $content       //消息内容数组或字符串，如果是数组将会被json_encode
      * @param $userIds       //用户id以,号分隔 msgType为2时userIds必传
      * @param $options       //弹窗选项目前支持 duration(毫秒), position, type参数（对应elementUi通知组件参数）
+     *                       //popType 弹出类型 ele为elementUi通知，browser为浏览器通知，all为elementUi通知 + 浏览器通知
      * @return array
      */
     public function push($senderId, $senderName, $msgType, $title, $content, $userIds = [0], $options = [])
@@ -48,10 +55,13 @@ class XHXPushApi
         if(empty($options) && $msgType != 3) {
             $options = [
                 'duration' => 0,
-                'position' => 'bottom-right',
-                'type' => 'info'
+                'position' => 'top-right',
+                'type' => 'info',
+                'popType' => 'all'
             ];
         }
+
+        if($msgType != 3) $options['duration'] = (int) $options['duration'];
 
         $params = [
             'senderId'   => (int) $senderId,
@@ -64,14 +74,19 @@ class XHXPushApi
             'timestamp'  => (string) microtime(true)
         ];
 
-        $params['token'] = md5(implode(self::$_api_secret, $params));
+        $dataJson = json_encode($params);
 
+        $token = md5(implode($this->apiSecret, $params));
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, self::$_api_url);
-        curl_setopt($ch, CURLOPT_HEADER, false);
+
+        curl_setopt($ch, CURLOPT_URL, $this->apiUrl);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json','Content-Length: ' . strlen($dataJson),
+            'ACCESS-TOKEN:' . $token
+        ]);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+        curl_setopt($ch, CURLOPT_POSTFIELDS,$dataJson);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($params));
         curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 
         $data = curl_exec($ch);

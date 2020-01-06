@@ -19,6 +19,15 @@ func (baseModel) ConnectDB(DBName string) (db *gorm.DB, err error) {
 		return nil, connectErr
 	}
 
+	//设置最大空闲连接数
+	db.DB().SetMaxIdleConns(dBConf.MaxIdleNum)
+	//设置最大连接数
+	db.DB().SetMaxOpenConns(dBConf.MaxOpenNum)
+	// 开启 Logger, 以展示详细的db日志
+	//db.LogMode(core.Config.Logger.Debug)
+	dbLog := core.Config.Logger.New("db_error")
+	db.SetLogger(dbLog)
+
 	return db, nil
 }
 

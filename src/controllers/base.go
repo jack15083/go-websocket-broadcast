@@ -1,8 +1,14 @@
 package controllers
 
 import (
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"reflect"
+	"strings"
+
+	"../core"
 )
 
 type BaseController struct{}
@@ -27,4 +33,25 @@ func (base *BaseController) sendError(w http.ResponseWriter, errorCode int, erro
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(&JsonResponse{Error: errorCode, Data: "", Message: errorMsg})
+}
+
+//check api key
+func (base *BaseController) checkApiKey(token string, params interface{}) bool {
+	value := reflect.ValueOf(params)
+	var data []string
+	for i := 0; i < value.NumField(); i++ {
+		data = append(data, fmt.Sprint(value.Field(i)))
+	}
+
+	str := strings.Join(data, core.Config.APISecret)
+	md5Data := []byte(str)
+	has := md5.Sum(md5Data)
+	md5str := fmt.Sprintf("%x", has) //将[]byte转成16进制
+
+	if md5str != token {
+		return false
+	}
+
+	return true
+
 }
