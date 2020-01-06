@@ -9,7 +9,7 @@
 class XHXPushApi
 {
     private static $_api_secret = 'dev'; //根据环境配置
-    private static $_api_url	= 'http://127.0.0.1:9002/push'; //根据环境配置
+    private static $_api_url	= 'http://127.0.0.1:9003/push'; //根据环境配置
 
      /**
      * singleton instance
