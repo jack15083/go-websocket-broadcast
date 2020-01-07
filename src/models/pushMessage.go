@@ -24,9 +24,7 @@ func (PushMessageModel) TableName() string {
 
 func (PushMessageModel) Create(m PushMessageModel) int64 {
 	db := GetDB("default")
-
 	m.CreateTime = time.Now().Format(config.TIMESTAMP_FORMAT)
-
 	db.Create(&m)
 
 	return m.ID
