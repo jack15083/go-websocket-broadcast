@@ -9,7 +9,7 @@ import (
 
 var _db map[string]*gorm.DB
 
-func init() {
+func Init() {
 	_db = make(map[string]*gorm.DB)
 	dBConf := core.Config.Database
 	for key, conf := range dBConf {

@@ -8,6 +8,7 @@ import (
 
 	"./controllers"
 	"./core"
+	"./models"
 	"./server"
 	log "github.com/sirupsen/logrus"
 )
@@ -17,6 +18,8 @@ func main() {
 	core.Config.Init()
 	//日志初始化
 	core.Config.Logger.Init()
+	//数据库初始化
+	models.Init()
 
 	chExit := make(chan os.Signal)
 	signal.Notify(chExit, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL)
