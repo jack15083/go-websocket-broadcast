@@ -33,11 +33,7 @@ func (PushMessageLogModel) CreateWaiteMessageLogs(waitUserIds []interface{}, msg
 		return
 	}
 
-	db, err := BaseModel.ConnectDB("default")
-	if err != nil {
-		return
-	}
-	defer db.Close()
+	db := GetDB("default")
 
 	sql := "INSERT INTO xhx_push_message_log (msg_id, msg_type, user_id, create_time, update_time) VALUES "
 	// 循环data数组,组合sql语句
@@ -55,12 +51,7 @@ func (PushMessageLogModel) CreateWaiteMessageLogs(waitUserIds []interface{}, msg
 
 //新增发送日志 status 1 发送成功 2发送失败 delete是否册除
 func (PushMessageLogModel) Create(msgId int64, msgType int, userId int64, clientId string, status int) int64 {
-	db, err := BaseModel.ConnectDB("default")
-	if err != nil {
-		return 0
-	}
-	defer db.Close()
-
+	db := GetDB("default")
 	if msgId == 0 {
 		return 0
 	}
@@ -76,33 +67,21 @@ func (PushMessageLogModel) Create(msgId int64, msgType int, userId int64, client
 
 //更新消息
 func (pml PushMessageLogModel) Save(id int64, clientId string, status int) {
-	db, err := BaseModel.ConnectDB("default")
-	if err != nil {
-		return
-	}
-	defer db.Close()
+	db := GetDB("default")
 	nowTime := time.Now().Format(config.TIMESTAMP_FORMAT)
 	db.Model(&pml).Where("id = ?", id).Updates(PushMessageLogModel{ClientId: clientId, Status: status, UpdateTime: nowTime})
 }
 
 func (pml PushMessageLogModel) SetDeleted(id int64) {
-	db, err := BaseModel.ConnectDB("default")
-	if err != nil {
-		return
-	}
-	defer db.Close()
+	db := GetDB("default")
 	nowTime := time.Now().Format(config.TIMESTAMP_FORMAT)
 	db.Model(&pml).Where("id = ?", id).Updates(PushMessageLogModel{Deleted: 1, UpdateTime: nowTime})
 }
 
 //获取用户最近的必读消息
 func (pml PushMessageLogModel) GetMustReadMsgByUserId(userId int64, unixtime int64) []config.MessageData {
-	db, err := BaseModel.ConnectDB("default")
+	db := GetDB("default")
 	var mustReadData []config.MessageData
-	if err != nil {
-		return mustReadData
-	}
-	defer db.Close()
 
 	var data []PushMessageLogModel
 	db.Where("user_id = ? and msg_type = 2 and status in(0, 2) and deleted = 0 and UNIX_TIMESTAMP(create_time) > ? ",
