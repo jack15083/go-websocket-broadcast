@@ -3,7 +3,7 @@ package models
 import (
 	"time"
 
-	"../config"
+	"push_service/src/config"
 )
 
 type PushMessageModel struct {

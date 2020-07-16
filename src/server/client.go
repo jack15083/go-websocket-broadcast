@@ -3,14 +3,13 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-
-	"../config"
-	"../models"
-	"../utils"
 	"github.com/go-redis/redis"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+	"push_service/src/config"
+	"push_service/src/models"
+	"push_service/src/utils"
+	"time"
 )
 
 type Client struct {

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"../config"
-	"../models"
-	"../server"
-	"../utils"
 	log "github.com/sirupsen/logrus"
+	"push_service/src/config"
+	"push_service/src/models"
+	"push_service/src/server"
+	"push_service/src/utils"
 )
 
 type PushController struct {

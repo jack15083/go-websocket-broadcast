@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"../config"
+	"push_service/src/config"
 )
 
 type PushMessageLogModel struct {

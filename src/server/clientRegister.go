@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"../config"
+	"push_service/src/config"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 )

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"../config"
-	"../utils"
+	"push_service/src/config"
+	"push_service/src/utils"
 	log "github.com/sirupsen/logrus"
 )
 

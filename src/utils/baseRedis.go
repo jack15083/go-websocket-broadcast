@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"../core"
+	"push_service/src/core"
 	"github.com/go-redis/redis"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )

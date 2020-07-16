@@ -6,11 +6,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"./controllers"
-	"./core"
-	"./models"
-	"./server"
 	log "github.com/sirupsen/logrus"
+	"push_service/src/controllers"
+	"push_service/src/core"
+	"push_service/src/models"
+	"push_service/src/server"
 )
 
 func main() {

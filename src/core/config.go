@@ -45,8 +45,13 @@ type RedisConfig struct {
 }
 
 func (c *config) Init() {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal("error get os.Getwd(): ", err.Error())
+	}
+
 	var configPath string
-	flag.StringVar(&configPath, "c", "config.local.json", "App conifg path")
+	flag.StringVar(&configPath, "c", dir+"/src/config.local.json", "App conifg path")
 	flag.Parse()
 	log.WithFields(log.Fields{"configPath": configPath}).Info("Config Init")
 
