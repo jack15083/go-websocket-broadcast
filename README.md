@@ -50,7 +50,7 @@ print_r($res);
 
 client.html
 
-```
+```html
 <!DOCTYPE html>
 <html>
 <head>
